@@ -1,4 +1,4 @@
-from keras.layers import merge
+from keras.layers.merge import concatenate
 from keras.layers.core import Lambda
 from keras.models import Model
 
@@ -26,13 +26,13 @@ def make_parallel(model, gpu_count):
                 for x in model.inputs:
                     input_shape = tuple(x.get_shape().as_list())[1:]
                     slice_n = Lambda(get_slice, output_shape=input_shape, arguments={'idx':i,'parts':gpu_count})(x)
-                    inputs.append(slice_n)                
+                    inputs.append(slice_n)
 
                 outputs = model(inputs)
-                
+
                 if not isinstance(outputs, list):
                     outputs = [outputs]
-                
+
                 #Save all the outputs for merging back together later
                 for l in range(len(outputs)):
                     outputs_all[l].append(outputs[l])
@@ -41,7 +41,6 @@ def make_parallel(model, gpu_count):
     with tf.device('/cpu:0'):
         merged = []
         for outputs in outputs_all:
-            merged.append(merge(outputs, mode='concat', concat_axis=0))
-            
-        return Model(input=model.inputs, output=merged)
+            merged.append(concatenate(outputs, axis=0))
 
+        return Model(inputs=model.inputs, outputs=merged)
